@@ -413,8 +413,9 @@ public class InstalledAppDetails extends AppInfoBase
         mUpdatedSysApp = (mAppEntry.info.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
         menu.findItem(UNINSTALL_UPDATES).setVisible(mUpdatedSysApp && !mAppControlRestricted);
 
-        menu.findItem(OPEN_PROTECTED_APPS).setVisible(mPackageInfo.applicationInfo.protect);
-
+        if (mPackageInfo.applicationInfo != null) {
+            menu.findItem(OPEN_PROTECTED_APPS).setVisible(mPackageInfo.applicationInfo.protect);
+        }
     }
 
     @Override
@@ -709,6 +710,10 @@ public class InstalledAppDetails extends AppInfoBase
     }
 
     private void checkForceStop() {
+        if (getActivity() == null || getActivity().isFinishing()) {
+            return;
+        }
+
         if (mDpm.packageHasActiveAdmins(mPackageInfo.packageName)) {
             // User can't force stop device admin.
             updateForceStopButton(false);
@@ -984,6 +989,13 @@ public class InstalledAppDetails extends AppInfoBase
             mPm.setApplicationEnabledSetting(mInfo.packageName, mState, 0);
             return null;
         }
+
+        @Override
+        protected void onPostExecute(Object o) {
+            if (mActivity.get() !=  null) {
+                mActivity.get().refreshUi();
+            }
+        }
     }
 
     private final LoaderCallbacks<ChartData> mDataCallbacks = new LoaderCallbacks<ChartData>() {
@@ -1008,7 +1020,9 @@ public class InstalledAppDetails extends AppInfoBase
     private final BroadcastReceiver mCheckKillProcessesReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            updateForceStopButton(getResultCode() != Activity.RESULT_CANCELED);
+            if (getActivity() != null && !getActivity().isDestroyed()) {
+                updateForceStopButton(getResultCode() != Activity.RESULT_CANCELED);
+            }
         }
     };
 
